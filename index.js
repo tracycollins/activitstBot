@@ -4,7 +4,7 @@ const record = require("node-record-lpcm16");
 const speech = require("@google-cloud/speech");
 const treeify = require("treeify");
 
-const clientSpeechToText = new speech.SpeechClient();
+const clientSpeechToText = new speech.v1p1beta1.SpeechClient();
 const clientTextToSpeech = new textToSpeech.TextToSpeechClient();
 
 const player = require("play-sound")(opts = {});
@@ -61,12 +61,18 @@ requestTextToSpeech.input.text = "";
 
 let recordObj;
 let recognizeStream;
+let recognizeStreamReady = false;
 
-function startRecord(){
+async function startRecord(){
 
-  startRecognizeStream();
+  recognizeStream = await  startRecognizeStream();
 
-  recordObj = record
+  if (!recognizeStream) { 
+    console.log("*** ERROR startRecord | recognizeStream UNDEFINED ???");
+    return null;
+  }
+
+  const ro = record
     .start({
       sampleRateHertz: sampleRateHertz,
       threshold: 0,
@@ -74,22 +80,60 @@ function startRecord(){
       recordProgram: "rec", // Try also "arecord" or "sox"
       silence: "0.5",
     })
-    .on("error", console.error)
+    .on("error", function(){ console.log("record END"); })
+    .on("end", function(){ console.log("record END"); })
+    .on("drain", function(){ console.log("record DRAIN"); })
+    .on("finish", function(){ console.log("record FINISH"); })
+    .on("pipe", function(){ console.log("record PIPE"); })
+    .on("unpipe", function(){ console.log("record UNPIPE"); })
+    .on("close", function(){ console.log("record CLOSE"); })
     .pipe(recognizeStream);
-  return;
+
+  if (!recognizeStreamReady) { 
+    console.log("*** ERROR startRecord | recognizeStream NOT READY");
+    return null;
+  }
+
+  return ro;
 }
 
 function stopRecord(){
-  if (recordObj) { recordObj.end(); }
+  if (recordObj) {
+    recordObj.end();
+    // recordObj.unpipe(recognizeStream);
+    return true;
+  }
+  return false;
 }
 
 
 function startRecognizeStream(){
 
-  recognizeStream = clientSpeechToText
+  const rcgs = clientSpeechToText
     .streamingRecognize(requestSpeechToText)
-    .on("end", function(){ console.log("END"); })
+    .on("end", function(){ 
+      recognizeStreamReady = false;
+      console.log("streamingRecognize END");
+    })
+    .on("drain", function(){ 
+      recognizeStreamReady = false;
+      console.log("streamingRecognize DRAIN");
+    })
+    .on("finish", function(){ 
+      recognizeStreamReady = false;
+      console.log("streamingRecognize FINISH");
+    })
+    .on("pipe", function(){ 
+      recognizeStreamReady = true;
+      console.log("streamingRecognize PIPE");
+    })
+    .on("close", function(){
+      recognizeStreamReady = false;
+      console.log("streamingRecognize CLOSE");
+    })
     .on("error", function(err){
+
+      recognizeStreamReady = false;
 
       console.log("*** ERROR | SPEECH-TO-TEXT\n" + jsonPrint(err));
 
@@ -101,11 +145,19 @@ function startRecognizeStream(){
         });
       }
       else {
-        console.log("QUITTING: SPEECH-TO-TEXT ERROR: ", err);
+        console.log("QUITTING: streamingRecognize SPEECH-TO-TEXT ERROR: ", err);
         quit();
       }
     })
-    .on("data", function(data){
+    .on("unpipe", function(){ 
+      recognizeStreamReady = false;
+      console.log("streamingRecognize UNPIPE");
+    })
+    .on("data", async function(data){
+
+      recognizeStreamReady = true;
+
+      await stopRecord();
 
       if (data.results[0] && data.results[0].alternatives[0]) {
         talkTextQueue.push(data);
@@ -116,6 +168,8 @@ function startRecognizeStream(){
       }
 
     });
+
+  return rcgs;
 }
 
 let talkTextInterval;
@@ -127,7 +181,7 @@ function initTalkTextInterval(interval){
   let data;
   let talkTextReady = true;
 
-  talkTextInterval = setInterval(function(){
+  talkTextInterval = setInterval(async function(){
 
     if (talkTextReady && (talkTextQueue.length > 0)) {
 
@@ -154,16 +208,17 @@ function initTalkTextInterval(interval){
 
           requestTextToSpeech.input.text = text;
 
-          stopRecord();
+          // await stopRecord();
 
-          talkText(requestTextToSpeech, function(){
+          talkText(requestTextToSpeech, async function(){
 
-            setTimeout(function(){
+            // setTimeout(async function(){
 
-              startRecord();
+              recordObj = await startRecord();
+
               talkTextReady = true;
 
-            }, 500);
+            // }, 500);
 
           });
         }
@@ -182,12 +237,12 @@ function initTalkTextInterval(interval){
 
 function talkText(params, callback){
 
-  clientTextToSpeech.synthesizeSpeech(params, (err, response) => {
+  clientTextToSpeech.synthesizeSpeech(params, function(err, response){
+
     if (err) {
       console.error("clientTextToSpeech ERROR:", err);
       return callback(err);
     }
-
 
     fs.writeFile("output.mp3", response.audioContent, "binary", function(err) {
       if (err) {
@@ -205,25 +260,32 @@ function talkText(params, callback){
 
       });
 
-      // console.log("Audio content written to file: output.mp3");
-
     });
+
   });
 }
 
 let runInterval;
 
-function run(interval){
+async function run(interval){
 
-  initTalkTextInterval(1000);
-  // startRecognizeStream();
-  startRecord();
+  initTalkTextInterval(100);
+
+  try {
+    recordObj = await startRecord();
+  }
+  catch(err){
+    console.log("RUN ERROR: ", err);
+  }
 
   console.log("Listening, press Ctrl+C to stop.");
 
   runInterval = setInterval(function(){
 
   }, interval);
+
+  return;
+
 }
 
 run(1000);
