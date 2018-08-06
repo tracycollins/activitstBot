@@ -43,6 +43,7 @@ async function quit(options) {
 
 const requestSpeechToText = {
   config: {
+    singleUtterance: true,
     encoding: encoding,
     sampleRateHertz: sampleRateHertz,
     languageCode: languageCode,
