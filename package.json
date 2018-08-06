@@ -1,0 +1,27 @@
+{
+  "name": "@threeceelabs/activitstbot",
+  "version": "1.0.0",
+  "description": "activist bot",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/tracycollins/activitstBot.git"
+  },
+  "author": "tc@threeceemedia.com",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/tracycollins/activitstBot/issues"
+  },
+  "homepage": "https://github.com/tracycollins/activitstBot#readme",
+  "dependencies": {
+    "@google-cloud/speech": "^2.0.0",
+    "@google-cloud/text-to-speech": "^0.3.0",
+    "howler": "^2.0.14",
+    "node-record-lpcm16": "^0.3.1",
+    "play-sound": "^1.1.2",
+    "treeify": "^1.1.0"
+  }
+}
