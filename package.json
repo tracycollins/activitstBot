@@ -1,5 +1,5 @@
 {
-  "name": "@threeceelabs/activitstbot",
+  "name": "@threeceelabs/activistbot",
   "version": "1.0.0",
   "description": "activist bot",
   "main": "index.js",
@@ -8,14 +8,14 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/tracycollins/activitstBot.git"
+    "url": "git+https://github.com/tracycollins/activistBot.git"
   },
   "author": "tc@threeceemedia.com",
   "license": "ISC",
   "bugs": {
-    "url": "https://github.com/tracycollins/activitstBot/issues"
+    "url": "https://github.com/tracycollins/activistBot/issues"
   },
-  "homepage": "https://github.com/tracycollins/activitstBot#readme",
+  "homepage": "https://github.com/tracycollins/activistBot#readme",
   "dependencies": {
     "@google-cloud/speech": "^2.0.0",
     "@google-cloud/text-to-speech": "^0.3.0",
