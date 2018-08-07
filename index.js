@@ -13,7 +13,6 @@ const encoding = "LINEAR16";
 const sampleRateHertz = 16000;
 const languageCode = "en-US";
 
-
 let talkTextQueue = [];
 
 
@@ -63,8 +62,11 @@ requestTextToSpeech.input.text = "";
 let recordObj;
 let recognizeStream;
 let recognizeStreamReady = false;
+let recordTimeTimeout;
 
 async function startRecord(){
+
+  console.log("startRecord");
 
   recognizeStream = await  startRecognizeStream();
 
@@ -100,6 +102,7 @@ async function startRecord(){
 
 function stopRecord(){
   if (recordObj) {
+    console.log("stopRecord");
     recordObj.end();
     // recordObj.unpipe(recognizeStream);
     return true;
@@ -132,22 +135,30 @@ function startRecognizeStream(){
       recognizeStreamReady = false;
       console.log("streamingRecognize CLOSE");
     })
-    .on("error", function(err){
+    .on("error", async function(err){
 
       recognizeStreamReady = false;
 
       console.log("*** ERROR | SPEECH-TO-TEXT\n" + jsonPrint(err));
 
       if (err.code === 11) {
+
         console.log("SPEECH-TO-TEXT TIME LIMIT");
-        requestTextToSpeech.input.text = "Sorry! Gotta go cuz we're out of time. Later!";
-        talkText(requestTextToSpeech, function(){
-          quit();
+
+        requestTextToSpeech.input.text = "OOPS! Time Limit! Restarting...";
+
+        talkText(requestTextToSpeech, async function(){
+          recordObj = await startRecord();
+          // quit();
         });
       }
       else {
         console.log("QUITTING: streamingRecognize SPEECH-TO-TEXT ERROR: ", err);
-        quit();
+
+        await stopRecord();
+        // recordObj = await startRecord();
+
+        // quit();
       }
     })
     .on("unpipe", function(){ 
@@ -165,7 +176,8 @@ function startRecognizeStream(){
       }
       else {
         console.log("SPEECH-TO-TEXT ERROR | END TIME");
-        quit();
+          // recordObj = await startRecord();
+        // quit();
       }
 
     });
@@ -190,45 +202,28 @@ function initTalkTextInterval(interval){
 
       data = talkTextQueue.shift();
 
-      // if (data.results[0] && data.results[0].alternatives[0]) {
+      let text = data.results[0].alternatives[0].transcript.trim();
 
-        let text = data.results[0].alternatives[0].transcript.trim();
+      // console.log("YOU SAID: " + text);
 
-        console.log("YOU SAID: " + text);
+      if (text === "quit") {
 
-        if (text === "quit") {
+        requestTextToSpeech.input.text = "Quitting!";
 
-          requestTextToSpeech.input.text = "Quitting!";
+        talkText(requestTextToSpeech, function(){
+          talkTextReady = true;
+          quit();
+        });
+      }
+      else {
 
-          talkText(requestTextToSpeech, function(){
-            talkTextReady = true;
-            quit();
-          });
-        }
-        else {
+        requestTextToSpeech.input.text = text;
 
-          requestTextToSpeech.input.text = text;
-
-          // await stopRecord();
-
-          talkText(requestTextToSpeech, async function(){
-
-            // setTimeout(async function(){
-
-              recordObj = await startRecord();
-
-              talkTextReady = true;
-
-            // }, 500);
-
-          });
-        }
-
-      // else {
-      //   console.log("SPEECH-TO-TEXT ERROR | END TIME");
-      //   talkTextReady = true;
-      //   quit();
-      // }
+        talkText(requestTextToSpeech, async function(){
+          recordObj = await startRecord();
+          talkTextReady = true;
+        });
+      }
     }
 
   }, 500);
@@ -237,6 +232,8 @@ function initTalkTextInterval(interval){
 
 
 function talkText(params, callback){
+
+  console.log("TALKING: " + params.input.text);
 
   clientTextToSpeech.synthesizeSpeech(params, function(err, response){
 
@@ -273,7 +270,15 @@ async function run(interval){
   initTalkTextInterval(100);
 
   try {
-    recordObj = await startRecord();
+    // recordObj = await startRecord();
+
+    requestTextToSpeech.input.text = "United Artists and Activists Union!";
+
+    talkText(requestTextToSpeech, async function(){
+      recordObj = await startRecord();
+      // quit();
+    });
+
   }
   catch(err){
     console.log("RUN ERROR: ", err);
