@@ -1,3 +1,6 @@
+const TALK_TEXT_INTERVAL = 10;
+const RUN_INTERVAL = 1000;
+
 const textToSpeech = require("@google-cloud/text-to-speech");
 const fs = require("fs");
 const record = require("node-record-lpcm16");
@@ -111,6 +114,7 @@ function stopRecord(){
 }
 
 
+
 function startRecognizeStream(){
 
   const rcgs = clientSpeechToText
@@ -143,14 +147,14 @@ function startRecognizeStream(){
 
       if (err.code === 11) {
 
-        console.log("SPEECH-TO-TEXT TIME LIMIT");
+        console.log("SPEECH-TO-TEXT TIME LIMIT | RESTARTING...");
 
-        requestTextToSpeech.input.text = "OOPS! Time Limit! Restarting...";
+        // requestTextToSpeech.input.text = "OOPS! Time Limit! Restarting...";
 
-        talkText(requestTextToSpeech, async function(){
+        // talkText(requestTextToSpeech, async function(){
           recordObj = await startRecord();
           // quit();
-        });
+        // });
       }
       else {
         console.log("QUITTING: streamingRecognize SPEECH-TO-TEXT ERROR: ", err);
@@ -203,8 +207,6 @@ function initTalkTextInterval(interval){
       data = talkTextQueue.shift();
 
       let text = data.results[0].alternatives[0].transcript.trim();
-
-      // console.log("YOU SAID: " + text);
 
       if (text === "quit") {
 
@@ -267,16 +269,13 @@ let runInterval;
 
 async function run(interval){
 
-  initTalkTextInterval(100);
+  initTalkTextInterval(TALK_TEXT_INTERVAL);
 
   try {
-    // recordObj = await startRecord();
-
     requestTextToSpeech.input.text = "United Artists and Activists Union!";
 
     talkText(requestTextToSpeech, async function(){
       recordObj = await startRecord();
-      // quit();
     });
 
   }
@@ -294,4 +293,4 @@ async function run(interval){
 
 }
 
-run(1000);
+run(RUN_INTERVAL);
