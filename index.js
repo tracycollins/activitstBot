@@ -79,23 +79,6 @@ async function startRecord(){
     const recording = recorder.record()
     recording.stream().pipe(recognizeStream)
 
-    // const ro = recorder
-    //   .start({
-    //     sampleRateHertz: sampleRateHertz,
-    //     threshold: 0,
-    //     verbose: false,
-    //     recordProgram: "rec", // Try also "arecord" or "sox"
-    //     silence: "0.5",
-    //   })
-      // .on("error", function(){ console.log("record END"); })
-      // .on("end", function(){ console.log("record END"); })
-      // .on("drain", function(){ console.log("record DRAIN"); })
-      // .on("finish", function(){ console.log("record FINISH"); })
-      // .on("pipe", function(){ console.log("record PIPE"); })
-      // .on("unpipe", function(){ console.log("record UNPIPE"); })
-      // .on("close", function(){ console.log("record CLOSE"); })
-      // .pipe(recognizeStream);
-
     if (!recognizeStreamReady) { 
       console.log("*** ERROR startRecord | recognizeStream NOT READY");
       return null;
@@ -112,7 +95,6 @@ function stopRecord(){
   if (recordObj) {
     console.log("stopRecord");
     recordObj.stop();
-    // recordObj.unpipe(recognizeStream);
     return true;
   }
   return false;
