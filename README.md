@@ -4,7 +4,8 @@ I created this bot for several actions by the United Artists & Activists Union (
 
 It's a chat bot with speech-to-text and text-to-speech capabilities which allow it to "listen" to nearby voices, recognize words (English, for now), and then respond with speech.
 
-Built on Google Cloud's Speech (https://github.com/googleapis/nodejs-speech) and Text-To-Speech (https://github.com/googleapis/nodejs-text-to-speech)
+Built on Google Cloud's Speech (https://github.com/googleapis/nodejs-speech) and Text-To-Speech (https://github.com/googleapis/nodejs-text-to-speech).
+You will need to have a Google account and setup billing, and authentication on a service account.
 
 Installation
 
