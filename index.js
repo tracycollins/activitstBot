@@ -3,20 +3,21 @@ const RUN_INTERVAL = 1000;
 
 const textToSpeech = require("@google-cloud/text-to-speech");
 const fs = require("fs");
-const record = require("node-record-lpcm16");
+const recorder = require("node-record-lpcm16");
 const speech = require("@google-cloud/speech");
 const treeify = require("treeify");
 
 const clientSpeechToText = new speech.v1p1beta1.SpeechClient();
 const clientTextToSpeech = new textToSpeech.TextToSpeechClient();
 
-const player = require("play-sound")(opts = {});
+const opts = {};
+const player = require("play-sound")(opts);
 
 const encoding = "LINEAR16";
 const sampleRateHertz = 16000;
 const languageCode = "en-US";
 
-let talkTextQueue = [];
+const talkTextQueue = [];
 
 
 const jsonPrint = function (obj) {
@@ -32,15 +33,12 @@ async function quit(options) {
 
   console.log("QUITTING ..." );
 
-  let forceQuitFlag = false;
-
   if (options) { 
     console.log("OPTIONS\n" + jsonPrint(options));
-    forceQuitFlag = options.force || false;
   }
 
-  setTimeout(function(){  process.exit(); }, 1000);
-};
+  setTimeout(function(){ process.exit(); }, 1000);
+}
 
 
 const requestSpeechToText = {
@@ -53,7 +51,7 @@ const requestSpeechToText = {
   interimResults: false, // If you want interim results, set this to true
 };
 
-let requestTextToSpeech = {};
+const requestTextToSpeech = {};
 requestTextToSpeech.voice = {};
 requestTextToSpeech.voice.languageCode = "en-US";
 requestTextToSpeech.voice.ssmlGender = "NEUTRAL";
@@ -65,54 +63,60 @@ requestTextToSpeech.input.text = "";
 let recordObj;
 let recognizeStream;
 let recognizeStreamReady = false;
-let recordTimeTimeout;
 
 async function startRecord(){
 
-  console.log("startRecord");
+  try{
+    console.log("startRecord");
 
-  recognizeStream = await  startRecognizeStream();
+    recognizeStream = await startRecognizeStream();
 
-  if (!recognizeStream) { 
-    console.log("*** ERROR startRecord | recognizeStream UNDEFINED ???");
-    return null;
+    if (!recognizeStream) { 
+      console.log("*** ERROR startRecord | recognizeStream UNDEFINED ???");
+      return null;
+    }
+
+    const recording = recorder.record()
+    recording.stream().pipe(recognizeStream)
+
+    // const ro = recorder
+    //   .start({
+    //     sampleRateHertz: sampleRateHertz,
+    //     threshold: 0,
+    //     verbose: false,
+    //     recordProgram: "rec", // Try also "arecord" or "sox"
+    //     silence: "0.5",
+    //   })
+      // .on("error", function(){ console.log("record END"); })
+      // .on("end", function(){ console.log("record END"); })
+      // .on("drain", function(){ console.log("record DRAIN"); })
+      // .on("finish", function(){ console.log("record FINISH"); })
+      // .on("pipe", function(){ console.log("record PIPE"); })
+      // .on("unpipe", function(){ console.log("record UNPIPE"); })
+      // .on("close", function(){ console.log("record CLOSE"); })
+      // .pipe(recognizeStream);
+
+    if (!recognizeStreamReady) { 
+      console.log("*** ERROR startRecord | recognizeStream NOT READY");
+      return null;
+    }
+
+    return recording;
   }
-
-  const ro = record
-    .start({
-      sampleRateHertz: sampleRateHertz,
-      threshold: 0,
-      verbose: false,
-      recordProgram: "rec", // Try also "arecord" or "sox"
-      silence: "0.5",
-    })
-    .on("error", function(){ console.log("record END"); })
-    .on("end", function(){ console.log("record END"); })
-    .on("drain", function(){ console.log("record DRAIN"); })
-    .on("finish", function(){ console.log("record FINISH"); })
-    .on("pipe", function(){ console.log("record PIPE"); })
-    .on("unpipe", function(){ console.log("record UNPIPE"); })
-    .on("close", function(){ console.log("record CLOSE"); })
-    .pipe(recognizeStream);
-
-  if (!recognizeStreamReady) { 
-    console.log("*** ERROR startRecord | recognizeStream NOT READY");
-    return null;
+  catch(err){
+    console.log("*** ERROR startRecord | ", err);
   }
-
-  return ro;
 }
 
 function stopRecord(){
   if (recordObj) {
     console.log("stopRecord");
-    recordObj.end();
+    recordObj.stop();
     // recordObj.unpipe(recognizeStream);
     return true;
   }
   return false;
 }
-
 
 
 function startRecognizeStream(){
@@ -146,24 +150,13 @@ function startRecognizeStream(){
       console.log("*** ERROR | SPEECH-TO-TEXT\n" + jsonPrint(err));
 
       if (err.code === 11) {
-
         console.log("SPEECH-TO-TEXT TIME LIMIT | RESTARTING...");
-
-        // requestTextToSpeech.input.text = "OOPS! Time Limit! Restarting...";
-
-        // talkText(requestTextToSpeech, async function(){
-          recordObj = await startRecord();
-          // quit();
-        // });
+        recordObj = await startRecord();
       }
       else {
         console.log("QUITTING: streamingRecognize SPEECH-TO-TEXT ERROR: ", err);
-
         await stopRecord();
-        // recordObj = await startRecord();
-
-        // quit();
-      }
+       }
     })
     .on("unpipe", function(){ 
       recognizeStreamReady = false;
@@ -180,8 +173,6 @@ function startRecognizeStream(){
       }
       else {
         console.log("SPEECH-TO-TEXT ERROR | END TIME");
-          // recordObj = await startRecord();
-        // quit();
       }
 
     });
@@ -206,7 +197,7 @@ function initTalkTextInterval(interval){
 
       data = talkTextQueue.shift();
 
-      let text = data.results[0].alternatives[0].transcript.trim();
+      const text = data.results[0].alternatives[0].transcript.trim();
 
       if (text === "quit") {
 
@@ -228,7 +219,7 @@ function initTalkTextInterval(interval){
       }
     }
 
-  }, 500);
+  }, interval);
 
 }
 
@@ -265,9 +256,7 @@ function talkText(params, callback){
   });
 }
 
-let runInterval;
-
-async function run(interval){
+async function run(){
 
   initTalkTextInterval(TALK_TEXT_INTERVAL);
 
@@ -284,10 +273,6 @@ async function run(interval){
   }
 
   console.log("Listening, press Ctrl+C to stop.");
-
-  runInterval = setInterval(function(){
-
-  }, interval);
 
   return;
 
