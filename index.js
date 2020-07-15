@@ -1,16 +1,14 @@
 const TALK_TEXT_INTERVAL = 10;
 const RUN_INTERVAL = 1000;
 
-const textToSpeech = require("@google-cloud/text-to-speech");
 const fs = require("fs");
 const recorder = require("node-record-lpcm16");
-// const speech = require("@google-cloud/speech");
 const treeify = require("treeify");
 
-// const clientSpeechToText = new speech.v1p1beta1.SpeechClient();
-const speech = require("@google-cloud/speech");
-const clientSpeechToText = new speech.SpeechClient();
+const speechToText = require("@google-cloud/speech");
+const clientSpeechToText = new speechToText.SpeechClient();
 
+const textToSpeech = require("@google-cloud/text-to-speech");
 const clientTextToSpeech = new textToSpeech.TextToSpeechClient();
 
 const opts = {};
